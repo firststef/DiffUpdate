@@ -1,4 +1,5 @@
 import argparse
+import sys
 
 
 class DDBFile:
@@ -17,7 +18,7 @@ class DDBFile:
         return self
 
 
-def main():
+def main(argv: list):
     parser = argparse.ArgumentParser(
         description='DiffUpdate stores different versions of binary files in an efficient manner'
                     '- by retaining differences between versions instead of the entire files'
@@ -43,7 +44,7 @@ def main():
     #                     help='[FUTURE] Using a previously created db, list all the files in the given db'
     #                     )
 
-    args = parser.parse_args()
+    args = parser.parse_args(args=argv)
 
     if args.create:
         db_name = args.name if args.name else args.create[0].split('.')[0]
@@ -63,4 +64,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv)
