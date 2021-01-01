@@ -1,6 +1,8 @@
 import unittest
+
+from DDBFile import DDBFile
 from diffupdatematcher import DiffUpdateMatcher
-from lcs_function import lcs, lcsr
+from lcs_function import lcs, lcsr, lcs2
 
 
 class TestFunctions(unittest.TestCase):
@@ -32,9 +34,24 @@ class DefaultDiffTester(unittest.TestCase):
     def test_create(self):
         d = DiffUpdateMatcher()
         d.do_diff(b'BDCABA', b'ABCBDAB')
+        print(lcs2('BDCABA', 'ABCBDAB'))
         self.assertEqual(b'ABCBDAB', d.apply_diff(b'BDCABA'))
         d.do_diff(b'', b'')
         self.assertEqual(b'', d.apply_diff(b''))
+
+
+class DBTester(unittest.TestCase):
+    def test_save(self):
+        db = DDBFile('test', ['test_fixtures/a', 'test_fixtures/b', 'test_fixtures/c'])
+        db.dump()
+
+    def test_load(self):
+        db = DDBFile('test', ['test_fixtures/a', 'test_fixtures/b', 'test_fixtures/c'])
+        db.dump()
+        db = DDBFile('test')
+        db.update('test_fixtures/b')
+        with open('test_fixtures/a', 'rb') as f:
+            self.assertEqual(f.read(), db.updated)
 
 
 if __name__ == "__main__":

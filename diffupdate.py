@@ -1,20 +1,6 @@
 import sys
 
-
-class DDBFile:
-    def __init__(self, name: str, versions: list = None):
-        self.out_file = name + ".ddb"
-        self.versions = versions
-
-    def goto(self, version: str):
-        pass
-
-    def dump(self):
-        with open(self.out_file, 'w') as f:
-            f.write('')
-
-    def load(self):
-        return self
+from DDBFile import DDBFile
 
 
 def main(argv: list):
@@ -68,7 +54,7 @@ def main(argv: list):
         db_name = db_name if db_name else sys.argv[3].split('.')[0]
 
         print('Updating')
-        DDBFile(db_name).load().goto(sys.argv[2])
+        DDBFile(db_name).update(sys.argv[2])
 
 
 if __name__ == "__main__":
