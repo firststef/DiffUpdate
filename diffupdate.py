@@ -45,8 +45,8 @@ def main(argv: list):
 
         db_name = db_name if db_name else argv[2].split('.')[0]
         files = argv[2:]
-        param_at_i -= 2
         if param_at_i:
+            param_at_i -= 2
             files = [j for i, j in enumerate(files) if i not in (param_at_i, param_at_i + 1)]
         db = DDBFile(db_name, files)
 

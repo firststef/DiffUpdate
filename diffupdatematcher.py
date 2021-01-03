@@ -3,12 +3,50 @@ from matcherinterface import MatcherInterface
 
 
 class DiffUpdateMatcher(MatcherInterface):
+    """
+    This class handles the diff algorithm used in DBBFile
+
+    similarity table
+    _-----C---A---B---A---D--
+    | 0 | 0 | 0 | 0 | 0 | 0 |
+    |---|---|---|---|---|---|
+    A 0 | 0 | 1 | 1 | 1 | 1 |
+    |---|---|---|---|---|---|
+    B 0 | 0 | 1 | 2 | 2 | 2 |
+    |---|---|---|---|---|---|
+    A 0 | 0 | 1 | 2 | 3 | 3 |
+    |---|---|---|---|---|---|
+    operations table
+    _-----C---A---B---A---D--
+    | 0 | 0<| 0 | 0 | 0 | 0 |
+    |---|---\---|---|---|---|
+    A 0 | 1 |\2<| 3 | 2 | 3 |
+    |---|---|---\---|---|---|
+    B 0 | 1 | 1 |\2<| 3 | 3 |
+    |---|---|---|---\---|---|
+    A 0 | 1 | 2 | 1 |\2<--3*|
+    |---|---|---|---|---|---|
+
+    by tracing the longest common subsequence we can determine the operations
+    we need to do to optimally generate the diff:
+    3->2->2->2->0
+    0 *, 1 remove, 2 same, 3 add
+    add D to y -> same A -> same B -> same A -> (add C to y / remove C from x)
+    only that they are in reverse
+    """
+
     def __init__(self):
         super().__init__()
         self.operations = b''
 
     @staticmethod
     def longest_common_subsequence(iter1: bytes, iter2: bytes):
+        """
+        Computes the operations to get from iter1 to iter2
+        :param iter1: the byte string you start with
+        :param iter2: the byte string you want to reach
+        :return: a buffer with the operations
+        """
         lcs_lengths = np.full((len(iter1) + 1, len(iter2) + 1), dtype=int, fill_value=0)
         matrix = np.full((len(iter1) + 1, len(iter2) + 1), dtype=int, fill_value=0)
 
@@ -41,12 +79,12 @@ class DiffUpdateMatcher(MatcherInterface):
         last_operation = None
         current_operation = None
         ops = {
-            'same': 1,
-            'add': 2,
-            'remove': 3,
-            'same_long': 4,
-            'add_long': 5,
-            'remove_long': 6,
+            'remove': 1,
+            'same': 2,
+            'add': 3,
+            'remove_long': 4,
+            'same_long': 5,
+            'add_long': 6,
         }
         size_of_op = 0
         add_buffer = b''
@@ -67,13 +105,13 @@ class DiffUpdateMatcher(MatcherInterface):
                 last_operation = 'remove'
                 i -= 1
             else:
-                if i == 0:
+                if j == 0:
+                    last_operation = 'remove'
+                    i -= 1
+                elif i == 0:
                     add_buffer = iter2[j - 1:j] + add_buffer
                     last_operation = 'add'
                     j -= 1
-                elif j == 0:
-                    last_operation = 'remove'
-                    i -= 1
 
             if current_operation is not None and last_operation != current_operation:
                 if current_operation == 'add':
@@ -105,17 +143,29 @@ class DiffUpdateMatcher(MatcherInterface):
         return operations
 
     def do_diff(self, old, new):
+        """
+        Executes the algorithm and stores the operations internally
+        :param old: start
+        :param new: target
+        :return: void
+        """
         self.operations = DiffUpdateMatcher.longest_common_subsequence(old, new)
 
-    def do_operations(self, target):
+    def apply_diff(self, target):
+        """
+        Given the old file, apply the operations from the internal buffer to reach new file
+        :param target: old file
+        :return: the updated file buffer
+        """
+
         result = b''
         ops = {
-            'same': b'\x01',
-            'add': b'\x02',
-            'remove': b'\x03',
-            'same_long': b'\x04',
-            'add_long': b'\x05',
-            'remove_long': b'\x06',
+            'remove': b'\x01',
+            'same': b'\x02',
+            'add': b'\x03',
+            'remove_long': b'\x04',
+            'same_long': b'\x05',
+            'add_long': b'\x06',
         }
 
         op_i = 0
@@ -150,6 +200,3 @@ class DiffUpdateMatcher(MatcherInterface):
                 op_i += 5
                 op_t += lent
         return result
-
-    def apply_diff(self, target):
-        return self.do_operations(target)

@@ -69,6 +69,7 @@ class EndToEndTester(unittest.TestCase):
         with open('test_fixtures/abc.ver2_2', 'wb') as f:
             with open('test_fixtures/abc.ver2', 'rb') as f2:
                 f.write(f2.read())
+        # talk about files sizes
 
 
 if __name__ == "__main__":

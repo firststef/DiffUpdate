@@ -4,7 +4,18 @@ from diffupdatematcher import DiffUpdateMatcher
 
 
 class DDBFile:
+    """
+    A class that contains code for working with diffupdate dbs, serialization, deserialization etc
+    """
     def __init__(self, name: str, versions: list = None):
+        """
+        Loads/Saves a diffupdate db
+        :param name: the file to be outputed to/ loaded from
+        :param versions: the files to be included in the db
+        if versions is None then the class attempts to load a db with the passed filename
+
+        to create an empty db you should pass versions as []
+        """
         self.versions = versions
         self.original_file = versions[0] if versions else None
         self.all_ops = {}
@@ -27,6 +38,11 @@ class DDBFile:
         self.save()
 
     def update(self, version: str):
+        """
+        Attempts to open a file, find out its operations from the current db and apply those operations
+        :param version:
+        :return: void, but the updated field now contains the latest version as it was applied from passed version
+        """
         with open(version, 'rb') as f:
             binary = f.read()
         crc = zlib.crc32(binary)
@@ -42,11 +58,19 @@ class DDBFile:
         self.updated = d.apply_diff(binary)
 
     def dump(self):
+        """
+        Flushes db contents to file
+        :return: void
+        """
         with open(self.out_file, 'wb') as f:
             f.write(self.bin)
             print('Saved!')
 
     def save(self):
+        """
+        Serializes in the bin field the current db state
+        :return: void
+        """
         all_files = {}
         header = []
         body = b''
@@ -70,6 +94,10 @@ class DDBFile:
         self.bin = len(header).to_bytes(4, "little") + header + body
 
     def load(self):
+        """
+        loads a db in the current class object
+        :return: void
+        """
         header_sz = int.from_bytes(self.bin[:4], "little")
         sik = 4+header_sz
         header = json.loads(self.bin[4:sik].decode('utf-8'))
