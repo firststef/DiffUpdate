@@ -35,7 +35,10 @@ class DDBFile:
             exit(1)
 
         d = DiffUpdateMatcher()
-        d.operations = self.all_ops[crc]
+        try:
+            d.operations = self.all_ops[crc]
+        except KeyError:
+            print('File is not the same as the files in the stored db')
         self.updated = d.apply_diff(binary)
 
     def dump(self):
