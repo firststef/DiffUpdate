@@ -43,7 +43,10 @@ class DiffUpdateMatcher(MatcherInterface):
         ops = {
             'same': 1,
             'add': 2,
-            'remove': 3
+            'remove': 3,
+            'same_long': 4,
+            'add_long': 5,
+            'remove_long': 6,
         }
         size_of_op = 0
         add_buffer = b''
@@ -76,9 +79,13 @@ class DiffUpdateMatcher(MatcherInterface):
                 if current_operation == 'add':
                     operations = add_buffer + operations
                     add_buffer = b''
-                operations = size_of_op.to_bytes(4, byteorder="little") + operations
-                operations = ops[current_operation].to_bytes(1, "little") + operations
-                print(current_operation + " " + str(size_of_op))
+                if size_of_op <= 255:
+                    operations = size_of_op.to_bytes(1, byteorder="little") + operations
+                    operations = ops[current_operation].to_bytes(1, "little") + operations
+                else:
+                    operations = size_of_op.to_bytes(4, byteorder="little") + operations
+                    operations = ops[current_operation + '_long'].to_bytes(1, "little") + operations
+                # print(current_operation + " " + str(size_of_op))
                 size_of_op = 0
 
             size_of_op += 1
@@ -87,9 +94,13 @@ class DiffUpdateMatcher(MatcherInterface):
         if current_operation is not None:
             if current_operation == 'add':
                 operations = add_buffer + operations
-            operations = size_of_op.to_bytes(4, byteorder="little") + operations
-            operations = ops[current_operation].to_bytes(1, "little") + operations
-            print(current_operation + " " + str(size_of_op))
+            if size_of_op <= 255:
+                operations = size_of_op.to_bytes(1, byteorder="little") + operations
+                operations = ops[current_operation].to_bytes(1, "little") + operations
+            else:
+                operations = size_of_op.to_bytes(4, byteorder="little") + operations
+                operations = ops[current_operation + '_long'].to_bytes(1, "little") + operations
+            # print(current_operation + " " + str(size_of_op))
 
         return operations
 
@@ -102,24 +113,40 @@ class DiffUpdateMatcher(MatcherInterface):
             'same': b'\x01',
             'add': b'\x02',
             'remove': b'\x03',
+            'same_long': b'\x04',
+            'add_long': b'\x05',
+            'remove_long': b'\x06',
         }
-        # todo add checksum
 
         op_i = 0
         op_t = 0
         while op_i < len(self.operations):
             if self.operations[op_i:op_i + 1] == ops['same']:
-                lent = int.from_bytes(self.operations[op_i+1:op_i+5], "little")
-                op_i += 5
+                lent = int.from_bytes(self.operations[op_i+1:op_i+2], "little")
+                op_i += 2
                 result += target[op_t:op_t+lent]
                 op_t += lent
             elif self.operations[op_i:op_i+1] == ops['add']:
-                leni = int.from_bytes(self.operations[op_i+1:op_i+5], "little")
-                op_i += 5
+                leni = int.from_bytes(self.operations[op_i+1:op_i+2], "little")
+                op_i += 2
                 result += self.operations[op_i:op_i+leni]
                 op_i += leni
             elif self.operations[op_i:op_i + 1] == ops['remove']:
-                lent = int.from_bytes(self.operations[op_i+1:op_i+5], "little")
+                lent = int.from_bytes(self.operations[op_i+1:op_i+2], "little")
+                op_i += 2
+                op_t += lent
+            elif self.operations[op_i:op_i + 1] == ops['same_long']:
+                lent = int.from_bytes(self.operations[op_i + 1:op_i + 5], "little")
+                op_i += 5
+                result += target[op_t:op_t + lent]
+                op_t += lent
+            elif self.operations[op_i:op_i + 1] == ops['add_long']:
+                leni = int.from_bytes(self.operations[op_i + 1:op_i + 5], "little")
+                op_i += 5
+                result += self.operations[op_i:op_i + leni]
+                op_i += leni
+            elif self.operations[op_i:op_i + 1] == ops['remove_long']:
+                lent = int.from_bytes(self.operations[op_i + 1:op_i + 5], "little")
                 op_i += 5
                 op_t += lent
         return result
